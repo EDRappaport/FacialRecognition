@@ -14,12 +14,12 @@ typedef dlib::matrix<double,0,1> column_vector;
 class Dictionary
 {
 public:
-    Dictionary(std::list<std::tuple<dlib::matrix<unsigned char>, long>> trainingSet);
+    Dictionary(std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> trainingSet);
     dlib::matrix<double> GetD();
-    std::vector<long> GetIdMap();
+    std::vector<std::tuple<long, std::string>> GetIdMap();
 private:
     dlib::matrix<double> _D;
-    std::vector<long> _map;
+    std::vector<std::tuple<long, std::string>> _map;
     
     column_vector MakeUnitL2Norm(column_vector col);
 };
