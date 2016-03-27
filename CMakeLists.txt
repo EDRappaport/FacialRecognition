@@ -20,7 +20,7 @@ install(TARGETS normalizefaceimages RUNTIME DESTINATION bin)
 
 add_executable(wrightLearning Recognition/wrightLearningMain.cpp
     Utilities/xmlRecordingsLoader.cpp CoreObjects/Recording.cpp Utilities/MatToMatrixConversions.cpp
-    Recognition/Dictionary.cpp Recognition/L1CostFunction.cpp)
+    Recognition/Dictionary.cpp Recognition/L1CostFunction.cpp Recognition/DataSplitter.cpp)
 target_link_libraries( wrightLearning ${OpenCV_LIBS})
 target_link_libraries( wrightLearning pugixml)
 target_link_libraries( wrightLearning dlib)

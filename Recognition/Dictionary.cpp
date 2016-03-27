@@ -5,6 +5,10 @@ Dictionary::Dictionary(std::list<std::tuple<dlib::matrix<unsigned char>, long, s
     std::cout << "Making Dictionary" << std:: endl;
     
     int trainingSize = trainingSet.size();
+    if (trainingSize == 0)
+    {
+	return;
+    }
     long signalLength = std::get<0>(trainingSet.front()).size();
     _D.set_size(signalLength, trainingSize);
     _map = std::vector<std::tuple<long, std::string>>(trainingSize);
