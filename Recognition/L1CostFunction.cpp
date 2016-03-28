@@ -20,7 +20,7 @@ double L1CostFunction::operator()(const column_vector& arg) const
     
     column_vector r = (_D->GetD() * arg) - _signal;   
     column_vector r2 = dlib::pointwise_multiply(r, r); 
-    double val = std::sqrt(dlib::sum(r2)) + _lambda*sum;
+    double val = (dlib::sum(r2)) + _lambda*sum;
     
     return val;
 }

@@ -3,7 +3,6 @@
 #include <list>
 #include <tuple> 
 #include <vector>
-#include <getopt.h>
 #include <stdlib.h>
 #include <time.h>
 #include <unordered_map>
@@ -16,67 +15,10 @@
 
 #include "../Utilities/xmlRecordingsLoader.hpp"
 #include "../Utilities/MatToMatrixConversions.hpp"
+#include "SharedUtils.hpp"
 #include "Dictionary.hpp"
 #include "L1CostFunction.hpp"
 #include "DataSplitter.hpp"
-
-void PrintUsage()
-{
-    std::cerr << "Usage: ./wrightLearning --xmlFileName <Ground Truths XML doc> --imageBasePath <Base Path for images> --alphaOutputs <Output filename for the sparse codes> --statsOutputs<Output filename for stats info>"
-    << std::endl;
-}
-
-void InputParser(int argc, char** argv, std::string* xmlFileName, std::string* imageBasePath,
-		 std::string* alphaOutputs, std::string* statsOutputs)
-{
-    (*xmlFileName) = "";
-    (*imageBasePath) = "";
-    (*alphaOutputs) = "";
-    (*statsOutputs) = "";
-    
-    static struct option long_options[] = 
-    {
-	{"xmlFileName", required_argument, 0, 'x'},
-	{"imageBasePath", required_argument, 0, 'i'},
-	{"alphaOutputs", required_argument, 0, 'a'},
-	{"statsOutputs", required_argument, 0, 's'},
-    };
-    
-    int c;
-    while(1)
-    {
-	int option_index = 0;
-	c = getopt_long (argc, argv, "x:i:a:s:h", long_options, &option_index);
-	if (c  == -1)
-	{
-	    break;
-	}
-	switch (c)
-	{
-	    case 'x':
-		(*xmlFileName) = optarg;
-		break;
-	    case 'i':
-		(*imageBasePath) = optarg;
-		break;
-	    case 'a':
-		(*alphaOutputs) = optarg;
-		break;
-	    case 's':
-		(*statsOutputs) = optarg;
-		break;
-	    case 'h':
-		PrintUsage();
-		exit(-1);
-	}
-    }
-    if (*xmlFileName == "" || *imageBasePath == "" || *alphaOutputs == "" || *statsOutputs == "")
-    {
-	std::cerr << "Missing required arguments."  << std::endl;
-	PrintUsage();
-	exit(-1);
-    }
-}
 
 
 dlib::matrix<unsigned char> ResizeAndConvert(cv::Mat image, cv::Size size)
@@ -109,13 +51,9 @@ void MakeDictionaries(std::list<std::tuple<cv::Size, Dictionary*>*>* sizeList, s
     {
 	cv::Size size = std::get<0>(**it);
 	std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> resized = ResizeAndConvertAll(trainingList, size);
-	std::cout << std::get<1>(**it) << std::endl;
 	Dictionary* dPtr = std::get<1>(**it);
-	std::cout << dPtr << std::endl;
 	dPtr = new Dictionary(resized);
 	std::get<1>(**it) = dPtr;
-	std::cout << std::get<1>(**it) << std::endl;
-	std::cout << dPtr << std::endl;
     }
 }
 
@@ -209,7 +147,7 @@ int main(int argc, char** argv)
     const double trainingRatio = 0.8;  
     
     std::string xmlFileName, imageBasePath, alphaOutputs, statsOutputs;
-    InputParser(argc, argv, &xmlFileName, &imageBasePath, &alphaOutputs, &statsOutputs);
+    SharedUtils::InputParser(argc, argv, &xmlFileName, &imageBasePath, &alphaOutputs, &statsOutputs);
     
     std::ofstream sparseCodesFile;
     sparseCodesFile.open(alphaOutputs);
@@ -239,10 +177,7 @@ int main(int argc, char** argv)
     sizeList.push_back(&t6);
     
     MakeDictionaries(&sizeList, trainingList);
-    
-    int numCorrect = 0;
-    int numWrong = 0;
-    
+
     bool printedYet = false;
     
     std::unordered_map<double, std::unordered_map<int, int>> correctStatsMap;
@@ -253,6 +188,7 @@ int main(int argc, char** argv)
     
     for (double lambda = .02; lambda < 0.2; lambda += .015)
     {
+	lambda = .005;
 	std::cout << "Lambda: " << lambda << std::endl;
 	for (std::list<std::tuple<cv::Mat, long, std::string>>::iterator it = testList.begin(); it != testList.end(); it++)
 	{
@@ -275,8 +211,15 @@ int main(int argc, char** argv)
 		
 		// find \alpha
 		dlib::find_min_using_approximate_derivatives(dlib::bfgs_search_strategy(),
-				dlib::objective_delta_stop_strategy(1e-5, 450).be_verbose(),
-				costFunc, startingPoint, -1, lambda);
+				dlib::objective_delta_stop_strategy(1e-5, 40).be_verbose(),
+				costFunc, startingPoint, -1);
+		
+		column_vector threshedAlpha(trainingList.size());
+		for (int ii = 0; ii < startingPoint.nr(); ii++)
+		{
+		    threshedAlpha(ii) = startingPoint(ii) > std::sqrt(2*lambda) ? startingPoint(ii) : 0;
+		    std::cout << startingPoint(ii) << ", " << threshedAlpha(ii) << std::endl;
+		}
 		//
 
 		
@@ -303,7 +246,7 @@ int main(int argc, char** argv)
 		sparseCodesFile << "[ ";
 		for (int i = 0; i < trainingList.size(); i++)
 		{
-		    sparseCodesFile << startingPoint(i) << ", ";
+		    sparseCodesFile << threshedAlpha(i) << ", ";
 		}
 		sparseCodesFile << "]" << std::endl;
 		//
@@ -316,11 +259,11 @@ int main(int argc, char** argv)
 		    long thisId = std::get<0>(idMap[i]);
 		    if (difMap.find(thisId) == difMap.end())
 		    {
-			difMap.emplace(thisId, startingPoint(i)*thisCol);
+			difMap.emplace(thisId, threshedAlpha(i)*thisCol);
 		    }
 		    else
 		    {
-			difMap[thisId] =  difMap[thisId] += startingPoint(i)*thisCol;
+			difMap[thisId] =  difMap[thisId] += threshedAlpha(i)*thisCol;
 		    }
 		}
 		
