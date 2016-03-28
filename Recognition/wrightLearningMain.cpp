@@ -14,43 +14,19 @@
 #include <opencv2/opencv.hpp>
 
 #include "../Utilities/xmlRecordingsLoader.hpp"
-#include "../Utilities/MatToMatrixConversions.hpp"
 #include "SharedUtils.hpp"
 #include "Dictionary.hpp"
 #include "L1CostFunction.hpp"
 #include "DataSplitter.hpp"
 
 
-dlib::matrix<unsigned char> ResizeAndConvert(cv::Mat image, cv::Size size)
-{
-    cv::Mat resizedCurrentImage;
-    cv::resize(image, resizedCurrentImage, size);
-    dlib::matrix<uchar> matrix = MatToMatrixConversions::MatToMatrix(resizedCurrentImage);
-    return matrix;
-}
-
-std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> ResizeAndConvertAll(std::list<std::tuple<cv::Mat, long, std::string>> trainingList, cv::Size size)
-{
-    std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> ret;
-    for (std::list<std::tuple<cv::Mat, long, std::string>>::iterator it = trainingList.begin(); it != trainingList.end(); it++)
-    {
-	cv::Mat currentImage = std::get<0>(*it);
-	long id = std::get<1>(*it);
-	std::string recordingId = std::get<2>(*it);
-
-	dlib::matrix<unsigned char> matrix = ResizeAndConvert(currentImage, size);
-	
-	ret.push_back(std::make_tuple(matrix, id, recordingId));
-    }
-    return ret;
-}
-
 void MakeDictionaries(std::list<std::tuple<cv::Size, Dictionary*>*>* sizeList, std::list<std::tuple<cv::Mat, long, std::string>> trainingList)
 {
     for (std::list<std::tuple<cv::Size, Dictionary*>*>::iterator it = (*sizeList).begin(); it != (*sizeList).end(); it++)
     {
 	cv::Size size = std::get<0>(**it);
-	std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> resized = ResizeAndConvertAll(trainingList, size);
+	std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> resized =
+	    SharedUtils::ResizeAndConvertAll(trainingList, size);
 	Dictionary* dPtr = std::get<1>(**it);
 	dPtr = new Dictionary(resized);
 	std::get<1>(**it) = dPtr;
@@ -199,13 +175,13 @@ int main(int argc, char** argv)
 	    {
 		// setup
 		cv::Size size = std::get<0>(**sizeIterator);
-		dlib::matrix<uchar> currentMatrix = ResizeAndConvert(currentImage, size);
+		dlib::matrix<uchar> currentMatrix = SharedUtils::ResizeAndConvert(currentImage, size);
 		Dictionary* D = std::get<1>(**sizeIterator);
 		std::cout << D << std::endl;
 		dlib::matrix<double> dict = D->GetD();
 		std::vector<std::tuple<long, std::string>> idMap = D->GetIdMap();
 				
-		L1CostFunction costFunc = L1CostFunction(D, lambda, currentMatrix);
+		L1CostFunction costFunc = L1CostFunction(dict, lambda, currentMatrix);
 		//
 		
 		

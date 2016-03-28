@@ -1,6 +1,6 @@
 #include "L1CostFunction.hpp"
 
-L1CostFunction::L1CostFunction(Dictionary* d, double lambda, dlib::matrix<unsigned char> signal)
+L1CostFunction::L1CostFunction(dlib::matrix<double> d, double lambda, dlib::matrix<unsigned char> signal)
 {
     _D = d;
     _lambda = lambda;
@@ -18,7 +18,7 @@ double L1CostFunction::operator()(const column_vector& arg) const
 	sum += std::abs(arg(i));
     }
     
-    column_vector r = (_D->GetD() * arg) - _signal;   
+    column_vector r = (_D * arg) - _signal;   
     column_vector r2 = dlib::pointwise_multiply(r, r); 
     double val = (dlib::sum(r2)) + _lambda*sum;
     

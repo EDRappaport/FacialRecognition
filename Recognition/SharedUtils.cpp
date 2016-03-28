@@ -57,3 +57,28 @@ void SharedUtils::InputParser(int argc, char** argv, std::string* xmlFileName, s
 	exit(-1);
     }
 }
+
+dlib::matrix<unsigned char> SharedUtils::ResizeAndConvert(cv::Mat image, cv::Size size)
+{
+    cv::Mat resizedCurrentImage;
+    cv::resize(image, resizedCurrentImage, size);
+    dlib::matrix<uchar> matrix = MatToMatrixConversions::MatToMatrix(resizedCurrentImage);
+    return matrix;
+}
+
+std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> SharedUtils::ResizeAndConvertAll(
+    std::list<std::tuple<cv::Mat, long, std::string>> trainingList, cv::Size size)
+{
+    std::list<std::tuple<dlib::matrix<unsigned char>, long, std::string>> ret;
+    for (std::list<std::tuple<cv::Mat, long, std::string>>::iterator it = trainingList.begin(); it != trainingList.end(); it++)
+    {
+	cv::Mat currentImage = std::get<0>(*it);
+	long id = std::get<1>(*it);
+	std::string recordingId = std::get<2>(*it);
+	
+	dlib::matrix<unsigned char> matrix = ResizeAndConvert(currentImage, size);
+	
+	ret.push_back(std::make_tuple(matrix, id, recordingId));
+    }
+    return ret;
+}

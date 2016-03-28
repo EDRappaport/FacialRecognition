@@ -13,10 +13,10 @@
 class L1CostFunction
 {
 public:
-    L1CostFunction(Dictionary* d,  double lambda, dlib::matrix<unsigned char> signal);
+    L1CostFunction(dlib::matrix<double> d,  double lambda, dlib::matrix<unsigned char> signal);
     double operator() ( const column_vector& arg) const;
 private:
-    Dictionary* _D;
+    dlib::matrix<double> _D;
     double _lambda;
     column_vector _signal;
 };
